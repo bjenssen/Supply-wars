@@ -1,80 +1,111 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.AI;
 
 public class UnitScript : MonoBehaviour {
-	
-	public GameObject m_Plane;
-	public float speed;
-	private Vector3 hitPoint;
-	private Vector3 point1;
-	private Vector3 point2;
-	private float A;
-	private float B;
-	private float C;
-	private float D;
-	private bool moving = false;
 
-	// Use this for initialization
+
+	public NavMeshAgent agent;
+	public Vector3 hitPoint;
+	public WagonScript closestWagon;
+	public int supply = 5;
+	public int health = 100;
+	public bool moving = false;
+	public bool attacking = false;
+	public GameObject greenBar;
+	public GameObject redBar;
+	public GameObject supplyBar;
+	public GameObject greenbar;
+	public GameObject redbar;
+	public GameObject supplybar;
+
+	private float d;
+	private float timer = 10.0f;
+	private float attackTimer = 1.0f;
+	private int maxSupply = 10;
+	private float maxHealth = 100;
+	private float range = 5.0f;
+	private bool collecting = false;
+	private GameControllerScript list;
+	private BoxSelectionScript bss;
+	public Animator m_Animator;
+
 	void Start () {
 		hitPoint = transform.position;
+		m_Animator = GetComponentInChildren<Animator>();
+		list = FindObjectOfType<GameControllerScript>();
+		bss = FindObjectOfType<BoxSelectionScript>();
+		greenbar = Instantiate(greenBar, new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), transform.rotation);
+		redbar = Instantiate(redBar, new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), transform.rotation);
+		supplybar = Instantiate(supplyBar, new Vector3(transform.position.x, transform.position.y + 0.45f, transform.position.z), transform.rotation);
+		redbar.transform.localScale = new Vector3(0.1f, 0.009f, 0.009f);
 	}
 
-	// Update is called once per frame
 	void Update () {
-		if (Input.GetMouseButtonDown(0)) {
-			RaycastHit hit;
-			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-			if (Physics.Raycast (ray, out hit)) {
-				point1 = new Vector3 (hit.point.x, transform.position.y, hit.point.z);
-				Debug.Log("1");
+		m_Animator.speed = 1;
+		for (int i = 0; i < list.wagons.Count; i++) {
+			if (closestWagon == null && (list.wagons [i].supply > 0 || i == list.wagons.Count-1)) {
+				closestWagon = list.wagons [i];
+				d = Vector3.Distance (list.wagons [i].transform.position, transform.position);
+			} else if (Vector3.Distance (list.wagons [i].transform.position, transform.position) <= d && list.wagons [i].supply > 0) {
+				closestWagon = list.wagons [i];
+				d = Vector3.Distance (list.wagons [i].transform.position, transform.position);
 			}
 		}
-		if (Input.GetMouseButtonUp(0)) {
-			RaycastHit hit;
-			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-			if (Physics.Raycast (ray, out hit)) {
-				point2 = new Vector3 (hit.point.x, transform.position.y, hit.point.z);
-				Debug.Log("2");
+		transform.eulerAngles += new Vector3 (-90, 0, 0);
+		if (attacking) {
+			m_Animator.SetBool ("isAttacking", true);
+			m_Animator.SetBool ("isWalking", false);
+			attackTimer -= Time.deltaTime;
+			if (attackTimer <= 0.0f) {
+				attacking = false;
+				attackTimer = 1.0f;
 			}
-			if (point1.x < point2.x) {
-				A = point1.x;
-				B = point2.x;
-			} else {
-				A = point2.x;
-				B = point1.x;
-			}
-			if (point1.z < point2.z) {
-				C = point1.z;
-				D = point2.z;
-			} else {
-				C = point2.z;
-				D = point1.z;
-			}
-			if (A <= transform.position.x && B >= transform.position.x && C <= transform.position.z && D >= transform.position.z) {
-				GetComponent<SelectionScript> ().selected = true;
+		} else if (collecting && !moving) {
+			agent.SetDestination (closestWagon.transform.position);
+			m_Animator.SetBool ("isWalking", true);
+			m_Animator.SetBool ("isAttacking", false);
+		} else if (Vector3.Distance(transform.position, hitPoint) >= 0.2f) {
+			//transform.rotation = Quaternion.LookRotation(m_Rigidbody.velocity);
+			m_Animator.SetBool ("isWalking", true);
+			m_Animator.SetBool ("isAttacking", false);
+			//m_Animator.speed = m_Rigidbody.velocity.magnitude / m_MoveSpeedMultiplier;
+			agent.SetDestination (hitPoint);
+		} else {
+			m_Animator.SetBool ("isWalking", false);
+			m_Animator.SetBool ("isAttacking", false);
+			moving = false;
+		}
+		timer -= Time.deltaTime;
+		if (timer <= 0.0f) {
+			timerEnded ();
+			timer = 10.0f;
+		}
+		if (supply <= 5 && Vector3.Distance(closestWagon.transform.position, transform.position) <= range) {
+			if (!moving && !attacking && closestWagon.supply >= 1) {
+				collecting = true;
 			}
 		}
-		if (GetComponent<SelectionScript>().selected) {
-			if (Input.GetMouseButtonDown (1)) {
-				RaycastHit hit;
-				Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-
-				if (Physics.Raycast (ray, out hit)) {
-					hitPoint = new Vector3 (hit.point.x, transform.position.y, hit.point.z);
-					moving = true;
-				}
+		if (collecting && Vector3.Distance(closestWagon.transform.position, transform.position) <= 0.5f) {
+			while (supply < maxSupply && closestWagon.supply >= 1) {
+				supply += 1;
+				closestWagon.supply -= 1;
 			}
+			collecting = false;
 		}
-		float step = speed * Time.deltaTime;
-		if (moving == true) {
-			transform.position = Vector3.MoveTowards (transform.position, hitPoint, step);
-			if (transform.position == hitPoint) {
-				moving = false;
-			}
+		if (health <= 0) {
+			Destroy (gameObject);
+			Destroy (redbar);
+			Destroy (greenbar);
+			Destroy (supplybar);
 		}
+	}
 
+	void timerEnded() {
+		if (supply == 0) {
+			health -= 20;
+		} else
+			supply -= 1;
+		if (supply != 0 && health < maxHealth)
+			health += 20;
 	}
 }

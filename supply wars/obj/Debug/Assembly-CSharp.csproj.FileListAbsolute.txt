@@ -1,0 +1,1 @@
+C:\Users\Bramj\Documents\GitHub\strategy-game\supply wars\obj\Debug\Assembly-CSharp.csprojResolveAssemblyReference.cache

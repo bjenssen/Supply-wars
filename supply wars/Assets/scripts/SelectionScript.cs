@@ -4,11 +4,17 @@ using UnityEngine;
 
 public class SelectionScript : MonoBehaviour {
 
-	public int supply = 0;
+
 	public bool selected = false;
+
+	bool isSelecting;
 	// Use this for initialization
 	void Start () {
-		
+		BoxSelectionScript.instance.boxSelect += SelectHandler;
+	}
+
+	void SelectHandler(){
+		selected = false;
 	}
 	
 	// Update is called once per frame
@@ -23,8 +29,5 @@ public class SelectionScript : MonoBehaviour {
 				} else selected = false;
 			} 
 		}
-		if (selected) {
-			gameObject.GetComponent<Renderer>().material.color = Color.cyan;
-		} else gameObject.GetComponent<Renderer>().material.color = Color.white;
 	}
 }
