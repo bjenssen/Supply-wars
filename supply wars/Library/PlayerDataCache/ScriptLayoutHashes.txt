@@ -1,6 +1,6 @@
 WindowsStandalone
 PlayerPath?
-C:/Users/Bramj/Desktop/Desktop.exe
+C:/Users/Bramj/Documents/GitHub/strategy-game/strategy-game.exe
 SceneListBegin?
 Assets/scenes/map1.unity
 SceneListEnd?
