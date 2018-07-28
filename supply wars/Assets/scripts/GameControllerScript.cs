@@ -13,9 +13,11 @@ public class GameControllerScript : MonoBehaviour {
 	public GameObject target;
 	public LayerMask enemyLayer;
 	public LayerMask unitLayer;
-	public Texture2D foreground;
-	public Texture2D background;
-	public Texture2D supplyMeter;
+	public int marching = 0;
+	public int fighting = 0;
+	public AudioSource marchingSource;
+	public AudioSource fightingSource;
+
 	
 	private GameObject[] spawnerArray;
 
@@ -26,9 +28,12 @@ public class GameControllerScript : MonoBehaviour {
 	//the wavenumber
 	private int wave = 0;
 	private float timer = 0.0f;
+	public float timer2 = 0.0f;
+	public float timer3 = 0.0f;
+	public bool scream = false;
+	public bool death = false;
 
 	private float d;
-
 
 	void Start () {
 		GameObject[] Array = GameObject.FindGameObjectsWithTag ("Wagon");
@@ -43,11 +48,31 @@ public class GameControllerScript : MonoBehaviour {
 	}
 
 	void Update () {
+		if (fighting > 5) {
+			if(!fightingSource.isPlaying){
+				fightingSource.Play(0);
+			}
+		} else if(marching > 10){
+			if(!marchingSource.isPlaying){
+				marchingSource.Play(0);
+			}
+			fightingSource.Stop();
+		} else marchingSource.Stop();
 		timer -= Time.deltaTime;
+		timer2 -= Time.deltaTime;
+		timer3 -= Time.deltaTime;
 		if (timer <= 0.0f) {
 			timerEnded ();
 			timer = 30.0f;
-		}
+		} 
+		if (timer2 <= 0.0f) {
+			scream = false;
+		} 
+		if (timer3 <= 0.0f) {
+			death = false;
+		} 
+		fighting = 0;
+		marching = 0;
 		for (int i = 0; i < units.Count; i++) {
 			if (units[i] != null) {
 				UnitScript uScript = units[i].GetComponent<UnitScript> ();
@@ -79,10 +104,14 @@ public class GameControllerScript : MonoBehaviour {
 				if(target != null && !uScript.moving)
 				{
 					uScript.hitPoint = target.transform.position;
+					fighting += 1;
 					if (Vector3.Distance(units[i].transform.position, target.transform.position) <= 0.5f && uScript.attacking == false) {
 						uScript.attacking = true;
 						target.GetComponent<EnemyScript> ().health -= 20;
 					}
+				}
+				if (uScript.m_Animator.GetBool ("isWalking")) {
+					marching += 1;
 				}
 			}
 		}

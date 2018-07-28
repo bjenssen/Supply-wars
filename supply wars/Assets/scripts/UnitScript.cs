@@ -24,7 +24,7 @@ public class UnitScript : MonoBehaviour {
 	private int maxSupply = 10;
 	private float maxHealth = 100;
 	private float range = 5.0f;
-	private bool collecting = false;
+	public bool collecting = false;
 	private GameControllerScript list;
 	private BoxSelectionScript bss;
 	public Animator m_Animator;

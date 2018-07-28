@@ -8,16 +8,21 @@ public class BoxSelectionScript : MonoBehaviour {
 	public LayerMask unitMask;
 
 	private Vector3 hitPoint;
-	private Vector3 point1;
-	private Vector3 point2;
+	private static Vector3 point1;
+	private static Vector3 point2;
 	private Vector3 Point;
+	public GameObject flag;
 	public string mouseX;
 	public string mouseY;
-	private float A;
-	private float B;
-	private float C;
-	private float D;
+	private static float A;
+	private static float B;
+	private static float C;
+	private static float D;
 	private int width;
+	private Vector3 posThickness = new Vector3(10, 10, 0);
+	private bool sndReady = false;
+	Vector3 mousePosition1;
+	Array[] GuiPosition;
 	public float spacing;
 
 	public event Action boxSelect;
@@ -26,6 +31,9 @@ public class BoxSelectionScript : MonoBehaviour {
 
 	Collider[] hitColliders;
 
+	public AudioSource source;
+	public AudioClip ready;
+
 	void Awake(){
 		if (instance == null) {
 			instance = this;
@@ -33,30 +41,60 @@ public class BoxSelectionScript : MonoBehaviour {
 			DestroyImmediate (gameObject);
 		}
 	}
-
+	static Texture2D _whiteTexture;
+    public static Texture2D WhiteTexture
+    {
+        get
+        {
+            if( _whiteTexture == null )
+            {
+                _whiteTexture = new Texture2D( 1, 1 );
+                _whiteTexture.SetPixel( 0, 0, Color.white );
+                _whiteTexture.Apply();
+            }
+ 
+            return _whiteTexture;
+        }
+    }
 	// Update is called once per frame
 	void Update () {
-		if (Input.GetMouseButtonDown (1)) {
+		if (Input.GetMouseButtonUp (1)) {
+			mousePosition1 = Input.mousePosition;
 			RaycastHit hit;
-
-			//new Vector2 mousePos =
 			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-
 			if (Physics.Raycast (ray, out hit)) {
-				hitPoint = new Vector3 (hit.point.x, transform.position.y, hit.point.z);
+				hitPoint = new Vector3 (hit.point.x, 0.4f, hit.point.z);
 			}
+			if (flag) {
+				GameObject.Destroy(flag);
+			}
+			flag = Instantiate (flag, hitPoint, new Quaternion(0,0,0,0));
 			int i = 0;
 			int n = 0;
 			int w = 0;
 			int x = 0;
 			int y = 0;
 			while (i < hitColliders.Length) {
+				// if (Physics.Raycast(ray, out hit)) {
+				// 	if (hit.transform.tag == "Wagon" && hitColliders [i].tag == "Unit") {
+				// 		UnitScript u = hitColliders [i].GetComponent<UnitScript> ();
+				// 		u.collecting = true;
+				// 		u.moving = false;
+				// 		u.attacking = false;
+				// 	} else if (hit.transform.tag == "Enemy" && hitColliders [i].tag == "Unit") {
+				// 		UnitScript u = hitColliders [i].GetComponent<UnitScript> ();
+				// 		u.collecting = false;
+				// 		u.moving = false;
+				// 		u.attacking = true;
+				// 	}
+				// } else 
 				if (hitColliders [i].tag == "Unit") {
 					x = n % width;
 					y = n / width;
 					Point = new Vector3 (hitPoint.x + (x * spacing), 0.1f, hitPoint.z + (y * spacing));
 					UnitScript u = hitColliders [i].GetComponent<UnitScript> ();
 					u.hitPoint = Point;
+					u.collecting = false;
 					u.moving = true;
 					u.attacking = false;
 					i++;
@@ -74,6 +112,7 @@ public class BoxSelectionScript : MonoBehaviour {
 			}
 		}
 		if (Input.GetMouseButtonDown (0)) {
+			mousePosition1 = Input.mousePosition;
 			RaycastHit hit;
 			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
 
@@ -104,6 +143,11 @@ public class BoxSelectionScript : MonoBehaviour {
 			}
 			MyCollisions ();
 		}
+		if (Input.GetMouseButtonUp(0)){
+			if (hitColliders.Length != 0){
+				source.PlayOneShot(ready, 3.0f);
+			}
+		}
 
 	}
 	void MyCollisions()
@@ -126,7 +170,34 @@ public class BoxSelectionScript : MonoBehaviour {
 				s.selected = true;
 			i++;
 		}
-
 	}
+	
+	void OnGUI()
+    {
+        if(Input.GetMouseButton (0))
+        {
+            // Create a rect from both mouse positions
+			var rect = BoxSelectionScript.GetScreenRect(mousePosition1, Input.mousePosition);
+            BoxSelectionScript.DrawScreenRect( rect, new Color( 0.8f, 0.8f, 0.95f, 0.25f ) );
+        }
+    }
+	public static Rect GetScreenRect( Vector3 screenPosition1, Vector3 screenPosition2 )
+	{
+    	// Move origin from bottom left to top left
+    	screenPosition1.y = Screen.height - screenPosition1.y;
+    	screenPosition2.y = Screen.height - screenPosition2.y;
+    	// Calculate corners
+    	var topLeft = Vector3.Min( screenPosition1, screenPosition2 );
+    	var bottomRight = Vector3.Max( screenPosition1, screenPosition2 );
+    	// Create Rect
+    	return Rect.MinMaxRect( topLeft.x, topLeft.y, bottomRight.x, bottomRight.y );
+	}
+	public static void DrawScreenRect( Rect rect, Color color )
+    {
+        GUI.color = color;
+        GUI.DrawTexture( rect, WhiteTexture );
+        GUI.color = Color.white;
+    }
+	
 }
 
